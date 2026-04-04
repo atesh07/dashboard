@@ -3,14 +3,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, ArrowUpRight, ArrowDownLeft, Plus, Copy, Calendar, Download, Sparkles, UserCircle2 } from 'lucide-react';
 
-import { cashflowData, initialTransactions, initialSavingsGoals, PIE_COLORS } from '../src/app/data/mockData';
-import { MetricCard } from '../src/app/components/ui/MetricCard';
-import { TransactionModal } from '../src/app/components/models/TransactionModal';
-import { GoalModal } from '../src/app/components/models/GoalModal';
-import { RecentActivity } from '../src/app/components/dashboard/RecentActivity';
-import { CashflowChart } from '../src/app/components/dashboard/CashflowChart';
-import { CategoryBreakdown } from '../src/app/components/dashboard/CategoryBreakdown';
-import { SavingsGoalsPanel } from '../src/app/components/dashboard/SavingsGoalsPanel';
+import { cashflowData, initialTransactions, initialSavingsGoals, PIE_COLORS } from '../../app/data/mockData';
+import { MetricCard } from '../ui/MetricCard';
+import { TransactionModal } from '../models/TransactionModal';
+import { GoalModal } from '../models/GoalModal';
+import { RecentActivity } from './RecentActivity';
+import { CashflowChart } from './CashflowChart';
+import { CategoryBreakdown } from './CategoryBreakdown';
+import { SavingsGoalsPanel } from './SavingsGoalsPanel';
 
 export default function Dashboard() {
   const [role, setRole] = useState<'admin' | 'viewer'>('admin');

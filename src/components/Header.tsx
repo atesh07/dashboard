@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, Bell, ChevronDown, X, Moon, Sun } from 'lucide-react';
-import { useTheme } from '../ThemeContext'; // Adjust path if needed
+import { useTheme } from '../app/ThemeContext'; // Adjust path if needed
 
 interface HeaderProps {
   onSearch?: (query: string) => void;

@@ -1,7 +1,7 @@
 import React from 'react'
 
-import MainDashboard from './components/MainDashboard'
-import Dashboard from '@/Dashboard'
+import MainDashboard from '../components/MainDashboard'
+import Dashboard from '@/components/dashboard/Dashboard'
 
 const page = () => {
   return (
