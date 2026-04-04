@@ -5,7 +5,7 @@ import {
   ChevronDown, ArrowUpRight, ArrowDownLeft, 
   Plus, Copy, Calendar, Download, MoreHorizontal, 
   Sparkles, BarChart3, Search, X, ArrowUpDown, PieChart as PieChartIcon, 
-  UserCircle2, ShieldCheck, Car, Home, PlusCircle
+  UserCircle2, ShieldCheck, Car, Home, PlusCircle, Target
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -31,13 +31,21 @@ const initialTransactions = [
   { id: 12, name: 'Upwork', category: 'Freelance', date: '12 Jul 2024', amount: 1250.00, type: 'income', icon: 'U', color: 'bg-green-100 text-green-600' },
 ];
 
-const savingsGoalsData = [
-  { id: 1, name: 'Emergency Fund', target: 20000, current: 14400, color: 'bg-blue-500', icon: ShieldCheck, timeLeft: '3 months left' },
-  { id: 2, name: 'New Car', target: 15000, current: 12600, color: 'bg-yellow-500', icon: Car, timeLeft: '1 month left' },
-  { id: 3, name: 'Dream House', target: 75000, current: 32000, color: 'bg-purple-500', icon: Home, timeLeft: '2 years left' }
+const initialSavingsGoals = [
+  { id: 1, name: 'Emergency Fund', target: 20000, current: 14400, color: 'bg-blue-500', iconName: 'ShieldCheck', timeLeft: '3 months left' },
+  { id: 2, name: 'New Car', target: 15000, current: 12600, color: 'bg-yellow-500', iconName: 'Car', timeLeft: '1 month left' },
+  { id: 3, name: 'Dream House', target: 75000, current: 32000, color: 'bg-purple-500', iconName: 'Home', timeLeft: '2 years left' }
 ];
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ec4899'];
+
+// Icon Mapper for persistence
+const iconMap: Record<string, any> = {
+  'ShieldCheck': ShieldCheck,
+  'Car': Car,
+  'Home': Home,
+  'Target': Target
+};
 
 // --- Custom Tooltips ---
 const CustomAreaTooltip = ({ active, payload, label }: any) => {
@@ -78,26 +86,36 @@ const MainSection = () => {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [searchQuery, setSearchQuery] = useState('');
-  const [transactions, setTransactions] = useState(initialTransactions);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTx, setNewTx] = useState({ name: '', amount: '', type: 'expense', category: '' });
   const [visibleLines, setVisibleLines] = useState({ income: true, expense: true });
   const [animateProgress, setAnimateProgress] = useState(false);
 
+  // Transactions State
+  const [transactions, setTransactions] = useState(initialTransactions);
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [newTx, setNewTx] = useState({ name: '', amount: '', type: 'expense', category: '' });
+
+  // Savings Goals State
+  const [savingsGoals, setSavingsGoals] = useState(initialSavingsGoals);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '' });
+
+  // --- Data Persistence ---
   useEffect(() => {
-    const saved = localStorage.getItem('fin_dashboard_txs_v4');
-    if (saved) {
-      try { setTransactions(JSON.parse(saved)); } catch (e) { console.error(e); }
-    }
-    // Trigger progress bar animations shortly after mount
+    const savedTxs = localStorage.getItem('zorvyn_txs');
+    const savedGoals = localStorage.getItem('zorvyn_goals');
+    if (savedTxs) try { setTransactions(JSON.parse(savedTxs)); } catch (e) {}
+    if (savedGoals) try { setSavingsGoals(JSON.parse(savedGoals)); } catch (e) {}
+    
     const timer = setTimeout(() => setAnimateProgress(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('fin_dashboard_txs_v4', JSON.stringify(transactions));
-  }, [transactions]);
+    localStorage.setItem('zorvyn_txs', JSON.stringify(transactions));
+    localStorage.setItem('zorvyn_goals', JSON.stringify(savingsGoals));
+  }, [transactions, savingsGoals]);
 
+  // --- Computed Data ---
   const filteredTransactions = useMemo(() => {
     let result = transactions.filter(tx => {
       const matchesFilter = filterType === 'all' || tx.type === filterType;
@@ -135,6 +153,18 @@ const MainSection = () => {
       .sort((a, b) => b.value - a.value);
   }, [transactions]);
 
+  // --- Handlers ---
+  const handleActionClick = (actionType: 'transfer' | 'receive' | 'quick') => {
+    if (role !== 'admin') {
+      alert("Viewer Mode: Action restricted.");
+      return;
+    }
+    if (actionType === 'transfer') setNewTx({ name: '', amount: '', type: 'expense', category: 'Transfer' });
+    if (actionType === 'receive') setNewTx({ name: '', amount: '', type: 'income', category: 'Deposit' });
+    if (actionType === 'quick') setNewTx({ name: 'Quick Contact', amount: '', type: 'expense', category: 'Transfer' });
+    setIsTxModalOpen(true);
+  };
+
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTx.name || !newTx.amount || !newTx.category) return;
@@ -153,8 +183,53 @@ const MainSection = () => {
     };
     
     setTransactions([transaction, ...transactions]);
-    setIsModalOpen(false);
+    setIsTxModalOpen(false);
     setNewTx({ name: '', amount: '', type: 'expense', category: '' });
+  };
+
+  const handleAddGoal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGoal.name || !newGoal.target || !newGoal.current) return;
+    
+    const colors = ['bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-emerald-500', 'bg-rose-500'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const goal = {
+      id: Date.now(),
+      name: newGoal.name,
+      target: parseFloat(newGoal.target),
+      current: parseFloat(newGoal.current),
+      color: randomColor,
+      iconName: 'Target',
+      timeLeft: 'Ongoing'
+    };
+
+    setSavingsGoals([...savingsGoals, goal]);
+    setIsGoalModalOpen(false);
+    setNewGoal({ name: '', target: '', current: '' });
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText('7484747583839384');
+    alert('Account number copied!');
+  };
+
+  // --- ACTUAL EXPORT FUNCTION RESTORED ---
+  const handleExportCSV = () => {
+    const headers = ["ID", "Name", "Category", "Date", "Amount", "Type"];
+    const csvContent = [
+      headers.join(","),
+      ...transactions.map(t => `${t.id},"${t.name}","${t.category}","${t.date}",${t.amount},${t.type}`)
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "zorvyn_transactions_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const toggleLine = (line: 'income' | 'expense') => {
@@ -180,7 +255,7 @@ const MainSection = () => {
           <button className="flex-1 md:flex-none flex items-center justify-center whitespace-nowrap px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-medium hover:shadow-md transition-all">
             <Calendar className="w-4 h-4 mr-2 text-gray-500" /> {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
           </button>
-          <button className="flex-1 md:flex-none flex items-center justify-center whitespace-nowrap px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5">
+          <button onClick={handleExportCSV} className="flex-1 md:flex-none flex items-center justify-center whitespace-nowrap px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 cursor-pointer">
             <Download className="w-4 h-4 mr-2" /> Export
           </button>
         </div>
@@ -196,17 +271,21 @@ const MainSection = () => {
           {/* Balance Card */}
           <div className="bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 hover:shadow-md transition-shadow w-full">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-slate-400">My Balance</h3>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-slate-400">Zorvyn Balance</h3>
               <span className="text-xs bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 px-2 py-1 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition">Current <ChevronDown className="inline w-3 h-3"/></span>
             </div>
             <div className="flex items-baseline space-x-3 mb-6">
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight truncate">${dynamicBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h1>
             </div>
+            <div className="flex items-center text-sm text-gray-500 dark:text-slate-400 mb-6 bg-white dark:bg-slate-900/50 w-fit px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+              <span className="tracking-widest mr-3 font-mono">7484 7475 8383 9384</span>
+              <Copy onClick={handleCopy} className="w-4 h-4 cursor-pointer hover:text-blue-500 transition-colors" />
+            </div>
             <div className="flex space-x-3 mt-4">
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center shadow-sm transition-all">
+              <button onClick={() => handleActionClick('transfer')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center shadow-sm transition-all">
                 <ArrowUpRight className="w-4 h-4 mr-2" /> Transfer
               </button>
-              <button className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
+              <button onClick={() => handleActionClick('receive')} className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition-all">
                 <ArrowDownLeft className="w-4 h-4 mr-2" /> Receive
               </button>
             </div>
@@ -218,11 +297,11 @@ const MainSection = () => {
               <h3 className="text-sm font-bold text-gray-900 dark:text-white">Quick Transfer</h3>
             </div>
             <div className="flex items-center space-x-3 overflow-x-auto pb-1 hide-scrollbar">
-               <button className="w-10 h-10 rounded-full border border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 flex-shrink-0 transition-colors">
+               <button onClick={() => handleActionClick('quick')} className="w-10 h-10 rounded-full border border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 flex-shrink-0 transition-colors">
                   <Plus className="w-5 h-5" />
                </button>
                {[1, 2, 3, 4].map((i) => (
-                 <div key={i} className="relative flex-shrink-0 cursor-pointer hover:ring-2 ring-blue-500 rounded-full transition-all">
+                 <div key={i} onClick={() => handleActionClick('quick')} className="relative flex-shrink-0 cursor-pointer hover:ring-2 ring-blue-500 rounded-full transition-all">
                    <UserCircle2 className="w-10 h-10 text-gray-300 dark:text-slate-600" />
                  </div>
                ))}
@@ -245,7 +324,7 @@ const MainSection = () => {
              <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-bold">Recent Activity</h3>
               {role === 'admin' && (
-                <button onClick={() => setIsModalOpen(true)} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-1.5 px-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center font-medium">
+                <button onClick={() => { setNewTx({ name: '', amount: '', type: 'expense', category: '' }); setIsTxModalOpen(true); }} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-1.5 px-3 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center font-medium">
                   <Plus className="w-4 h-4 mr-1" /> Add
                 </button>
               )}
@@ -254,18 +333,12 @@ const MainSection = () => {
             <div className="space-y-3 mb-4">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input 
-                  type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              
               <div className="flex items-center justify-between gap-2">
                 <div className="flex bg-gray-100 dark:bg-slate-900 p-1 rounded-lg flex-1 overflow-x-auto hide-scrollbar">
                   {(['all', 'income', 'expense'] as const).map(f => (
-                    <button key={f} onClick={() => setFilterType(f)} className={`flex-1 min-w-[60px] py-1.5 text-[10px] sm:text-xs font-medium rounded-md capitalize transition-all ${filterType === f ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>
-                      {f}
-                    </button>
+                    <button key={f} onClick={() => setFilterType(f)} className={`flex-1 min-w-[60px] py-1.5 text-[10px] sm:text-xs font-medium rounded-md capitalize transition-all ${filterType === f ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{f}</button>
                   ))}
                 </div>
                 <button onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')} className="bg-gray-100 dark:bg-slate-900 p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0">
@@ -304,13 +377,11 @@ const MainSection = () => {
         {/* ========================================== */}
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 w-full">
           
-          {/* Top Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
             <MetricCard title="Monthly Spent" amount="$45,623.48" trend="↑ 16.5%" trendColor="text-red-500 bg-red-50 dark:bg-red-900/30 dark:text-red-400" />
             <MetricCard title="Monthly Income" amount="$84,884.80" trend="↑ 12.8%" trendColor="text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400" />
           </div>
 
-          {/* 1. Time-Based Viz: Cashflow Double Area Chart */}
           <div className="w-full bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 flex flex-col min-h-[250px] lg:min-h-[280px]">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div>
@@ -320,15 +391,12 @@ const MainSection = () => {
                     <span className="text-xs font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full">↑ 16.8%</span>
                 </div>
               </div>
-              
               <div className="flex items-center space-x-3 sm:space-x-4 bg-gray-50 dark:bg-slate-900 px-3 sm:px-4 py-2 rounded-xl border border-gray-100 dark:border-slate-700">
                 <button onClick={() => toggleLine('expense')} className={`flex items-center text-[10px] sm:text-xs font-semibold transition-opacity ${!visibleLines.expense && 'opacity-40'}`}>
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 mr-2 shadow-sm"></span>
-                  <span className="text-gray-600 dark:text-slate-300">Expense</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 mr-2 shadow-sm"></span><span className="text-gray-600 dark:text-slate-300">Expense</span>
                 </button>
                 <button onClick={() => toggleLine('income')} className={`flex items-center text-[10px] sm:text-xs font-semibold transition-opacity ${!visibleLines.income && 'opacity-40'}`}>
-                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-2 shadow-sm"></span>
-                  <span className="text-gray-600 dark:text-slate-300">Income</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-2 shadow-sm"></span><span className="text-gray-600 dark:text-slate-300">Income</span>
                 </button>
               </div>
             </div>
@@ -337,36 +405,25 @@ const MainSection = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={cashflowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#facc15" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#facc15" stopOpacity={0}/>
-                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#facc15" stopOpacity={0.3}/><stop offset="95%" stopColor="#facc15" stopOpacity={0}/></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-200 dark:text-slate-700/50" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} tickFormatter={(value) => `$${value / 1000}k`} dx={-5} />
                   <Tooltip cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} content={<CustomAreaTooltip />} />
-                  
-                  {visibleLines.expense && (
-                    <Area type="monotone" dataKey="expense" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, strokeWidth: 0, fill: '#2563eb' }} />
-                  )}
-                  {visibleLines.income && (
-                    <Area type="monotone" dataKey="income" stroke="#facc15" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 5, strokeWidth: 0, fill: '#facc15' }} />
-                  )}
+                  {visibleLines.expense && <Area type="monotone" dataKey="expense" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" activeDot={{ r: 5, strokeWidth: 0, fill: '#2563eb' }} />}
+                  {visibleLines.income && <Area type="monotone" dataKey="income" stroke="#facc15" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 5, strokeWidth: 0, fill: '#facc15' }} />}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* LOWER GRID: Category Breakdown & Savings Goals Side-by-Side */}
+          {/* LOWER GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full flex-1">
             
-            {/* 2. Categorical Viz: Spending Breakdown Donut Chart */}
-            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 flex flex-col min-h-[300px]">
+            {/* Category Breakdown */}
+            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 flex flex-col min-h-[280px]">
               <div className="flex justify-between items-center mb-1">
                 <h3 className="text-base font-bold">Category Breakdown</h3>
                 <PieChartIcon className="w-5 h-5 text-gray-400" />
@@ -376,118 +433,95 @@ const MainSection = () => {
               <div className="flex-1 w-full relative flex items-center justify-center min-h-[160px]">
                 {expensesByCategory.length > 0 ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
-                    <span className="text-xl font-bold text-gray-900 dark:text-white truncate max-w-[80%]">
-                      ${expensesByCategory.reduce((sum, item) => sum + item.value, 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
-                    </span>
+                    <span className="text-xl font-bold text-gray-900 dark:text-white truncate max-w-[80%]">${expensesByCategory.reduce((sum, item) => sum + item.value, 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                     <span className="text-[10px] sm:text-xs text-gray-500 dark:text-slate-400">Total</span>
                   </div>
-                ) : (
-                  <span className="text-sm text-gray-400">No Data</span>
-                )}
-
+                ) : (<span className="text-sm text-gray-400">No Data</span>)}
                 <ResponsiveContainer width="100%" height="100%" className="z-10">
                   <PieChart>
-                    <Pie
-                      data={expensesByCategory}
-                      cx="50%" cy="50%"
-                      innerRadius="65%" outerRadius="85%"
-                      paddingAngle={5} cornerRadius={8}
-                      dataKey="value" stroke="none"
-                    >
-                      {expensesByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer outline-none" />
-                      ))}
+                    <Pie data={expensesByCategory} cx="50%" cy="50%" innerRadius="65%" outerRadius="85%" paddingAngle={5} cornerRadius={8} dataKey="value" stroke="none">
+                      {expensesByCategory.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer outline-none" />)}
                     </Pie>
                     <Tooltip content={<CustomPieTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* Dynamic Legend */}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {expensesByCategory.slice(0, 4).map((category, idx) => (
                   <div key={idx} className="flex items-center text-xs text-gray-600 dark:text-gray-300 font-medium">
-                    <div className="w-2.5 h-2.5 rounded-full mr-2 shrink-0" style={{ backgroundColor: category.fill }}></div>
-                    <span className="truncate">{category.name}</span>
+                    <div className="w-2.5 h-2.5 rounded-full mr-2 shrink-0" style={{ backgroundColor: category.fill }}></div><span className="truncate">{category.name}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Savings Goals (UPGRADED) */}
-            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 flex flex-col min-h-[300px]">
+            {/* Savings Goals */}
+            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/50 flex flex-col">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-base font-bold">Savings Goals</h3>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Active portfolies</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Active portfolios</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Add New Goal">
-                    <PlusCircle className="w-5 h-5" />
-                  </button>
+                  {role === 'admin' && (
+                    <button onClick={() => setIsGoalModalOpen(true)} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Add New Goal">
+                      <PlusCircle className="w-5 h-5" />
+                    </button>
+                  )}
                   <span className="text-xs bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 px-3 py-1.5 rounded-lg font-medium cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition hidden sm:inline-block">Q3 Goals <ChevronDown className="inline w-3 h-3 ml-1"/></span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {savingsGoalsData.map((goal) => {
-                  const percentage = Math.round((goal.current / goal.target) * 100);
-                  return (
-                    <div key={goal.id} className="group p-3 sm:p-4 rounded-2xl bg-gray-50/50 dark:bg-slate-700/20 border border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-all hover:shadow-sm">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl text-white ${goal.color} shadow-sm`}>
-                            <goal.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                {savingsGoals.length === 0 ? (
+                   <div className="flex items-center justify-center h-full text-sm text-gray-400">No active goals.</div>
+                ) : (
+                  savingsGoals.map((goal) => {
+                    const percentage = Math.min(100, Math.round((goal.current / goal.target) * 100));
+                    const GoalIcon = iconMap[goal.iconName] || Target; // Fallback to Target icon
+                    return (
+                      <div key={goal.id} className="group p-3 sm:p-4 rounded-2xl bg-gray-50/50 dark:bg-slate-700/20 border border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-all hover:shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl text-white ${goal.color} shadow-sm`}><GoalIcon className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[100px] sm:max-w-[120px]">{goal.name}</h4>
+                              <p className="text-[10px] text-gray-500 dark:text-slate-400">Target: ${goal.target.toLocaleString()}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{goal.name}</h4>
-                            <p className="text-[10px] text-gray-500 dark:text-slate-400">Target: ${goal.target.toLocaleString()}</p>
+                          <div className="text-right">
+                            <span className="text-sm font-extrabold text-gray-900 dark:text-white">${goal.current.toLocaleString()}</span>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">{goal.timeLeft}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-sm font-extrabold text-gray-900 dark:text-white">${goal.current.toLocaleString()}</span>
-                          <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">{goal.timeLeft}</p>
+                        <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden flex items-center shadow-inner relative">
+                          <div className={`${goal.color} h-full transition-all duration-[1500ms] ease-out relative`} style={{ width: animateProgress ? `${percentage}%` : '0%' }}>
+                            <div className="absolute top-0 left-0 right-0 bottom-0 bg-white/20 w-full h-full animate-pulse"></div>
+                          </div>
                         </div>
+                        <div className="flex justify-end mt-1"><span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">{percentage}% Complete</span></div>
                       </div>
-                      
-                      {/* Animated Progress Bar */}
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden flex items-center shadow-inner relative">
-                        <div 
-                          className={`${goal.color} h-full transition-all duration-[1500ms] ease-out relative`} 
-                          style={{ width: animateProgress ? `${percentage}%` : '0%' }}
-                        >
-                          {/* Inner shimmer animation */}
-                          <div className="absolute top-0 left-0 right-0 bottom-0 bg-white/20 w-full h-full animate-pulse"></div>
-                        </div>
-                      </div>
-                      <div className="flex justify-end mt-1">
-                         <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">{percentage}% Complete</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
 
           </div>
-
         </div>
       </div>
 
       {/* --- ADD TRANSACTION MODAL --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 relative max-h-[90vh] overflow-y-auto">
+      {isTxModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 relative">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg sm:text-xl font-bold">Add Transaction</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-              </button>
+              <button onClick={() => setIsTxModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" /></button>
             </div>
-
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name / Merchant</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name / Source</label>
                 <input type="text" required value={newTx.name} onChange={e => setNewTx({...newTx, name: e.target.value})} className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Netflix" />
               </div>
               <div>
@@ -507,9 +541,36 @@ const MainSection = () => {
                   </select>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-semibold py-2.5 sm:py-3 rounded-xl transition-all mt-4 sm:mt-6 shadow-sm">
-                Save Transaction
-              </button>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-semibold py-2.5 sm:py-3 rounded-xl transition-all mt-4 sm:mt-6 shadow-sm">Save Transaction</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD SAVINGS GOAL MODAL --- */}
+      {isGoalModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 relative">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg sm:text-xl font-bold">Add Savings Goal</h2>
+              <button onClick={() => setIsGoalModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" /></button>
+            </div>
+            <form onSubmit={handleAddGoal} className="space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Name</label>
+                <input type="text" required value={newGoal.name} onChange={e => setNewGoal({...newGoal, name: e.target.value})} className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Vacation" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Amount ($)</label>
+                  <input type="number" step="1" required value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="10000" />
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Saved ($)</label>
+                  <input type="number" step="1" required value={newGoal.current} onChange={e => setNewGoal({...newGoal, current: e.target.value})} className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="500" />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-semibold py-2.5 sm:py-3 rounded-xl transition-all mt-4 sm:mt-6 shadow-sm">Save Goal</button>
             </form>
           </div>
         </div>
