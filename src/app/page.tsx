@@ -1,11 +1,13 @@
 import React from 'react'
 
 import MainDashboard from './components/MainDashboard'
+import Dashboard from '@/Dashboard'
 
 const page = () => {
   return (
     <div >
-    <MainDashboard />
+   <Dashboard />
+   {/* <MainDashboard /> */}
     </div>
   )
 }
