@@ -7,7 +7,7 @@ A modern, responsive, and highly interactive Finance Dashboard built for the Fro
 This project focuses on delivering a premium User Experience (UX) with dynamic data visualization, robust state management, and seamless animations, designed to help users intuitively track and understand their financial activity.
 
 visit the dashboard----
-🚀 [View Live Project](https://dashboard-2tr07hmne-atesh07s-projects.vercel.app/)
+🚀 [View Live Project](https://dashboard-iota-three-40.vercel.app/)
 ---
 
 ## 🚀 Quick Start / Setup Instructions
