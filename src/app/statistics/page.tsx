@@ -104,7 +104,7 @@ export default function Statistics() {
   const categoryData = useMemo(() => {
     const expenses = filteredTransactions.filter(tx => tx.type === 'Debit' || tx.type === 'expense');
     const grouped = expenses.reduce((acc, tx) => {
-      const cat = tx.description || tx.category || 'Other';
+      const cat = tx.description  || 'Other';
       acc[cat] = (acc[cat] || 0) + Math.abs(tx.amount);
       return acc;
     }, {} as Record<string, number>);
