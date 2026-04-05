@@ -6,7 +6,8 @@ A modern, responsive, and highly interactive Finance Dashboard built for the Fro
 
 This project focuses on delivering a premium User Experience (UX) with dynamic data visualization, robust state management, and seamless animations, designed to help users intuitively track and understand their financial activity.
 
-![Zorvyn Dashboard Preview](https://via.placeholder.com/1200x600.png?text=Zorvyn+Finance+Dashboard) *(You can replace this link with a screenshot of your actual app later)*
+visit the dashboard----
+https://dashboard-2tr07hmne-atesh07s-projects.vercel.app/
 
 ---
 
