@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, ArrowUpRight, ArrowDownLeft, Plus, Copy, Calendar, Download, Sparkles, UserCircle2 } from 'lucide-react';
 
-import { cashflowData, initialTransactions, initialSavingsGoals, PIE_COLORS } from '../../app/data/mockData';
+import { cashflowData, initialTransactions, initialSavingsGoals, PIE_COLORS } from '../../data/mockData';
 import { MetricCard } from '../ui/MetricCard';
 import { TransactionModal } from '../models/TransactionModal';
 import { GoalModal } from '../models/GoalModal';
@@ -137,7 +137,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex w-full md:w-auto space-x-3 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+        <div className="flex w-full md:w-auto space-x-3 overflow-x-auto mr-3 pb-2 md:pb-0 hide-scrollbar">
           <button className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl text-sm font-medium"><Calendar className="w-4 h-4 mr-2" /> Today</button>
           <button onClick={handleExportCSV} className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm"><Download className="w-4 h-4 mr-2" /> Export</button>
         </div>

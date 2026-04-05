@@ -11,7 +11,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 
-import { cashflowData, initialTransactions } from '../Data/mockData';
+import { cashflowData, initialTransactions } from '../../data/mockData';
 
 const pieData = [
   { name: 'Income', value: 30, color: '#10b981' },

@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, MoreHorizontal, ChevronLeft, ChevronRight, Check, Calendar, X } from 'lucide-react';
 
 // --- Extended Mock Data ---
-import { extendedTransactions } from '../data/mockData'; // Import the extended transactions data
+import { extendedTransactions } from '../../data/mockData'; // Import the extended transactions data
 export default function TransactionsPage() {
   // --- States ---
   const [searchQuery, setSearchQuery] = useState('');

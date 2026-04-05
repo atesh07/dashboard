@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, Bell, ChevronDown, X, Moon, Sun } from 'lucide-react';
-import { useTheme } from '../app/ThemeContext'; // Adjust path if needed
+import { useTheme } from '../context/ThemeContext'; // Adjust path if needed
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -22,8 +22,8 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
 
   return (
     <header className="flex items-center justify-between px-8 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 w-full transition-colors duration-300">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Overview</h1>
+      <div className='mr-3'>
+        <h1 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Overview</h1>
       </div>
 
       <div className="flex items-center space-x-6">
@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
           </button>
         </div>
 
-        <div className="flex items-center pl-2 cursor-pointer group">
+        <div className="flex items-center pl-2 mr-3 cursor-pointer group">
           <img src="https://pbs.twimg.com/profile_images/1335140657736847362/_QfZWzUv_400x400.jpg" alt="Atesh" className="w-10 h-10 rounded-full object-cover mr-3 border-2 border-transparent group-hover:border-blue-500 transition-all" />
           <div className="flex flex-col mr-2">
             <span className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Atesh</span>
